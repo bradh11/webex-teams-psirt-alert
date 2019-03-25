@@ -1,0 +1,13 @@
+# PSIRT Alert Bot
+
+webex_teams_token = ""
+bot_email = "mybot@webex.bot"
+
+webhook_listener_base_url = "https://mywebehook.domain.com"
+webhook_port = 443
+
+credentials = {
+    "CLIENT_ID": "kjslajdlkasjdlakjsd",
+    "CLIENT_SECRET": "dsgfdshfdshfdhgdsfhfd",
+}
+

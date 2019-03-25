@@ -1,0 +1,6 @@
+openVulnQuery
+requests
+webexteamssdk
+tinydb
+flask
+waitress
