@@ -1,0 +1,36 @@
+version: 1
+disable_existing_loggers: false
+formatters:
+  standard:
+    datefmt: '%a, %d %b %Y %H:%M:%S'
+    format: '%(asctime)s %(levelname)-8s %(message)s'
+handlers:
+  console:
+    class: logging.StreamHandler
+    formatter: standard
+    level: INFO
+  rotate_daily:
+    backupCount: 30
+    class: logging.handlers.TimedRotatingFileHandler
+    encoding: utf8
+    filename: ./logs/logfile.log
+    formatter: standard
+    level: INFO
+    when: midnight
+  rotate_file_by_size:
+    backupCount: 1
+    class: logging.handlers.RotatingFileHandler
+    encoding: utf8
+    filename: ./logs/logfile.log
+    formatter: standard
+    level: INFO
+    maxBytes: 100000
+loggers:
+  standard:
+    handlers:
+      - rotate_daily
+    level: INFO
+  advanced:
+    handlers:
+      - rotate_file_by_size
+    level: DEBUG
