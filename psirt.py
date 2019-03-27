@@ -1,6 +1,8 @@
 import config
 from openVulnQuery import query_client
 from webexteamssdk import WebexTeamsAPI
+from datetime import datetime, timedelta
+import dateutil.parser
 
 api = WebexTeamsAPI(access_token=config.webex_teams_token)
 
@@ -50,13 +52,60 @@ def construct_message_alert(advisory):
     return full_message
 
 
-def get_advisories(room_id, product="cisco", count=5):
+def date_from_string(s):
+    d = dateutil.parser.parse(s)
+    return d.replace(tzinfo=None)
+
+
+def get_advisories_by_product(room_id, product="cisco", count=5):
+    product = " ".join(product)
+    api.messages.create(
+        roomId=room_id,
+        markdown=f"One moment please while I retrieve the last {count} alerts for product: {product}",
+    )
+    advisories = query_client.get_by_product(adv_format="default", product_name=product)
+
+    for advisory in advisories[0:4]:
+
+        # TODO: if last_update is more recent that now, send the alert
+        print(f"advisory last_updated: {advisory.last_updated}")
+        advisory_date = date_from_string(advisory.last_updated)
+        advisory_time_delta = (datetime.now() - advisory_date).total_seconds()
+
+        if advisory_time_delta > 3600:
+            print(f"timedelta is less than 1 hr: {advisory_time_delta}")
+            full_message = construct_message_alert(advisory)
+            api.messages.create(roomId=room_id, markdown=full_message)
+        else:
+            print(
+                f"timedelta is greater than 1 hr since last_update: {advisory_time_delta}"
+            )
+
+    return True
+
+
+def get_latest_advisories(room_id, product="cisco", count=5):
+    api.messages.create(
+        roomId=room_id,
+        markdown=f"One moment please while I retrieve the last {count} alerts",
+    )
     advisories = query_client.get_by_latest(adv_format="default", latest=count)
 
     for advisory in advisories:
-        full_message = construct_message_alert(advisory)
+
         # TODO: if last_update is more recent that now, send the alert
-        api.messages.create(roomId=room_id, markdown=full_message)
+        print(f"advisory last_updated: {advisory.last_updated}")
+        advisory_date = date_from_string(advisory.last_updated)
+        advisory_time_delta = (datetime.now() - advisory_date).total_seconds()
+
+        if advisory_time_delta > 3600:
+            print(f"timedelta is less than 1 hr: {advisory_time_delta}")
+            full_message = construct_message_alert(advisory)
+            api.messages.create(roomId=room_id, markdown=full_message)
+        else:
+            print(
+                f"timedelta is greater than 1 hr since last_update: {advisory_time_delta}"
+            )
 
     return True
 

@@ -8,6 +8,7 @@ from tinydb import TinyDB, Query, where
 from tinydb.operations import delete, increment, decrement
 import config
 import psirt
+from apscheduler.schedulers.background import BackgroundScheduler
 
 this_folder = os.getcwd()
 
@@ -43,8 +44,8 @@ for room in bot_room_list:
 
 app = Flask(__name__)
 
-help_message_group = f"## PSIRT Notifier\nThank you for adding me to your space.  I am here to alert you when new PSIRT alerts are announced by Cisco.  I will do this automatically unless you ask me not to.\n\n* If you want to stop receiving automatic updates simply @mention me and type `unsubscribe`.\n\n* If you want to opt back in simply @mention me and type `subscribe`\n\n* To get the last `x` alerts type `last 5` (for example)\n\n* If you want to see the latest (5) advisories, simply type `alerts`"
-help_message_direct = f"## PSIRT Notifier\nThank you for adding me to your space.  I am here to alert you when new PSIRT alerts are announced by Cisco.  I will do this automatically unless you ask me not to.\n\n* If you want to stop receiving automatic updates simply type `unsubscribe`.\n\n* If you want to opt back in simply type `subscribe`\n\n* To get the last `x` alerts type `last 5` (for example)\n\n* If you want to know the latest (5) advisories, simply type `alerts`"
+help_message_group = f"## PSIRT Notifier\nThank you for adding me to your space.  I am here to alert you when new PSIRT alerts are announced by Cisco.  I will do this automatically unless you ask me not to.\n\n* If you want to stop receiving automatic updates simply @mention me and type `unsubscribe`.\n\n* If you want to opt back in simply @mention me and type `subscribe`\n\n* To get the last `x` alerts @mention `last 5` (for example)\n\n* If you want to filter by product @mention `product <product name>`\n\n* If you want to see the latest (5) advisories, simply type `alerts`"
+help_message_direct = f"## PSIRT Notifier\nThank you for adding me to your space.  I am here to alert you when new PSIRT alerts are announced by Cisco.  I will do this automatically unless you ask me not to.\n\n* If you want to stop receiving automatic updates simply type `unsubscribe`.\n\n* If you want to opt back in simply type `subscribe`\n\n* To get the last `x` alerts type `last 5` (for example)\n\n* If you want to filter by product type `product <product name>`\n\n* If you want to know the latest (5) advisories, simply type `alerts`"
 
 
 def register_webhook():
@@ -137,9 +138,11 @@ def handle_commands(received_message, email, room_id):
     """
     print(received_message)
     if "alerts" in received_message:
-        psirt.get_advisories(room_id=room_id)
+        psirt.get_latest_advisories(room_id=room_id)
     elif "last" in received_message:
-        psirt.get_advisories(room_id=room_id, count=received_message[1])
+        psirt.get_latest_advisories(room_id=room_id, count=received_message[1])
+    elif "product" in received_message:
+        psirt.get_advisories_by_product(room_id=room_id, product=received_message[1:])
 
 
 def respond_to_message(json_data):
@@ -210,29 +213,29 @@ def periodic_psirt_check():
     """ 
     This function will run inside a loop and check if versions have changed every 30 minutes.
     """
-    interval = 3600  # frequency of checks
-    time.sleep(interval / 2)
-
     logger.debug(f"checking psirt for updates")
-    new_update = True  # TODO: function to check timedelta
+
+    # TODO: function to check timedelta of most recent 5 alerts and send alert if newer than last 1hr
+    # psirt_notifications = psirt.get_latest_advisories()  # check logic here...
 
     if not new_update:
         logger.debug(f"no change since last interval")
-        pass
+        return
     else:
+        logger.info(f"new alert found")
         # update_messages = construct_version_update_messages(version_changed)
         # alert_subscribers of change and send update messages
         # alert_subscribers(update_messages)
         # update_version_cache(latest_versions)
-        pass
-    threading.Timer(interval / 2, periodic_version_check).start()
 
 
 if __name__ == "__main__":
     register_webhook()
 
-    # t = threading.Thread(target=periodic_psirt_check)
-    # t.start()
+    scheduler = BackgroundScheduler()
+    job = scheduler.add_job(periodic_psirt_check, "interval", minutes=60)
+    scheduler.start()
 
     print(f"bot is running")
-    app.run(debug=True, host="0.0.0.0", port=config.webhook_port, use_reloader=False)
+    app.run(debug=True, host="0.0.0.0", port=config.webhook_port, use_reloader=False)  #
+
