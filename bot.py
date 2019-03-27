@@ -209,31 +209,11 @@ def webhook_receiver():
     return "200"
 
 
-def periodic_psirt_check():
-    """ 
-    This function will run inside a loop and check if versions have changed every 30 minutes.
-    """
-    logger.debug(f"checking psirt for updates")
-
-    # TODO: function to check timedelta of most recent 5 alerts and send alert if newer than last 1hr
-    # psirt_notifications = psirt.get_latest_advisories()  # check logic here...
-
-    if not new_update:
-        logger.debug(f"no change since last interval")
-        return
-    else:
-        logger.info(f"new alert found")
-        # update_messages = construct_version_update_messages(version_changed)
-        # alert_subscribers of change and send update messages
-        # alert_subscribers(update_messages)
-        # update_version_cache(latest_versions)
-
-
 if __name__ == "__main__":
     register_webhook()
 
     scheduler = BackgroundScheduler()
-    job = scheduler.add_job(periodic_psirt_check, "interval", minutes=60)
+    job = scheduler.add_job(psirt.periodic_check, "interval", minutes=60)
     scheduler.start()
 
     print(f"bot is running")

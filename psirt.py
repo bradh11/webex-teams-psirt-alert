@@ -66,20 +66,8 @@ def get_advisories_by_product(room_id, product="cisco", count=5):
     advisories = query_client.get_by_product(adv_format="default", product_name=product)
 
     for advisory in advisories[0:4]:
-
-        # TODO: if last_update is more recent that now, send the alert
-        print(f"advisory last_updated: {advisory.last_updated}")
-        advisory_date = date_from_string(advisory.last_updated)
-        advisory_time_delta = (datetime.now() - advisory_date).total_seconds()
-
-        if advisory_time_delta > 3600:
-            print(f"timedelta is less than 1 hr: {advisory_time_delta}")
-            full_message = construct_message_alert(advisory)
-            api.messages.create(roomId=room_id, markdown=full_message)
-        else:
-            print(
-                f"timedelta is greater than 1 hr since last_update: {advisory_time_delta}"
-            )
+        full_message = construct_message_alert(advisory)
+        api.messages.create(roomId=room_id, markdown=full_message)
 
     return True
 
@@ -92,22 +80,47 @@ def get_latest_advisories(room_id, product="cisco", count=5):
     advisories = query_client.get_by_latest(adv_format="default", latest=count)
 
     for advisory in advisories:
+        full_message = construct_message_alert(advisory)
+        api.messages.create(roomId=room_id, markdown=full_message)
 
-        # TODO: if last_update is more recent that now, send the alert
-        print(f"advisory last_updated: {advisory.last_updated}")
+    return True
+
+
+def alert_subscribers(message):
+    """
+    Alert subscribers that a version has changed
+    """
+    subscribers = db.search(User.subscribed == True)
+
+    for user in subscribers:
+        print(f"sending {messages} to {user['room_title']}")
+        api.messages.create(user["room_id"], markdown=message)
+
+
+def periodic_check():
+    """ 
+    This function will run inside a loop and check if psirt database has changed at an interval defined by background scheduler
+    """
+    logger.debug(f"checking psirt for updates")
+
+    # check timedelta of most recent 5 alerts and send alert if newer than last 1hr
+    advisories = query_client.get_by_latest(adv_format="default", latest=5)
+
+    for advisory in advisories:
+        logging.debug(f"advisory last_updated: {advisory.last_updated}")
         advisory_date = date_from_string(advisory.last_updated)
         advisory_time_delta = (datetime.now() - advisory_date).total_seconds()
 
-        if advisory_time_delta > 3600:
-            print(f"timedelta is less than 1 hr: {advisory_time_delta}")
+        if advisory_time_delta <= 3600:
+            logging.info(
+                f"timedelta is less than 1 hr: {advisory_time_delta} - sending alert"
+            )
             full_message = construct_message_alert(advisory)
-            api.messages.create(roomId=room_id, markdown=full_message)
+            alert_subscribers(full_message)
         else:
-            print(
+            logging.debug(
                 f"timedelta is greater than 1 hr since last_update: {advisory_time_delta}"
             )
-
-    return True
 
 
 if __name__ == "__main__":
