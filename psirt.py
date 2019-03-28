@@ -74,9 +74,10 @@ def construct_message_alert(advisory):
 
 
 def date_from_string(s):
-    # d = dateutil.parser.parse(s)
+    # convert string to datetime object
     d = datetime.strptime(s, "%Y-%m-%dT%H:%M:%S%z")
-    return d.replace(tzinfo=timezone.utc).replace(tzinfo=None)
+    print(d)
+    return d.replace(tzinfo=None)
 
 
 def get_advisories_by_product(room_id, product="cisco", count=5):
@@ -116,14 +117,17 @@ def alert_subscribers(message):
 
     for user in subscribers:
         print(f"sending message to {user['room_title']}")
-        # api.messages.create(user["room_id"], markdown=message)
+        api.messages.create(user["room_id"], markdown=message)
 
 
 def notification_cache(advisory):
     """
     cache the last advisory details for future comparison of date stamps
     """
-    last_update = {"last_updated": advisory.last_updated, "advisory_id": advisory.advisory_id}
+    last_update = {
+        "last_updated": advisory.last_updated,
+        "advisory_id": advisory.advisory_id,
+    }
 
     with open("notification_cache.json", "w") as outfile:
         json.dump(last_update, outfile, indent=2)
@@ -138,7 +142,7 @@ def periodic_check():
 
     # check timedelta of most recent 5 alerts and send alert if newer than last 1hr
     advisories = psirt_query.get_by_latest(adv_format="default", latest=20)
-    
+
     for advisory in advisories:
         logger.debug(f"advisory last_updated: {advisory.last_updated}")
         advisory_date = date_from_string(advisory.last_updated)
@@ -160,6 +164,7 @@ def periodic_check():
 
     # update the cache after peridoic check
     notification_cache(advisories[0])
+
 
 if __name__ == "__main__":
     check_alerts = get_advisories()
