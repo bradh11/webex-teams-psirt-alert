@@ -51,8 +51,10 @@ help_message_direct = f"## PSIRT Notifier\nThank you for adding me to your space
 def register_webhook():
     # cleanout any old webhooks the bot created in the past when initializing
     for webhook in registered_webhooks:
-        api.webhooks.delete(webhook.id)
-
+        try:
+            api.webhooks.delete(webhook.id)
+        except Exception as e:
+            print(e)
     # Register the BOT webhook for new message notification
     webhook_reg = api.webhooks.create(
         name=config.bot_name, targetUrl=webhook_listener, resource="all", event="all"

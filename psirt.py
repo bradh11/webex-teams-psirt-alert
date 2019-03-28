@@ -1,12 +1,33 @@
-import config
+import os, logging, logging.config, json
+import pytz
+from datetime import datetime, timedelta, timezone
 from openVulnQuery import query_client
 from webexteamssdk import WebexTeamsAPI
-from datetime import datetime, timedelta
-import dateutil.parser
+from tinydb import TinyDB, Query, where
+import yaml
+import config
+
+this_folder = os.getcwd()
+
+# initialize the database
+db = TinyDB("db.json", indent=2, sort_keys=True)
+db.table(name="_default", cache_size=0)
+User = Query()
+
+if os.path.exists(f"{this_folder}/logs/logfile.log"):
+    pass
+else:
+    os.makedirs(os.path.dirname(f"{this_folder}/logs/logfile.log"), exist_ok=True)
+    open(f"{this_folder}/logs/logfile.log", "a").close()
+
+logging_config = yaml.load(open("./logging_config.yaml", "r"))
+logging.config.dictConfig(logging_config)
+logger = logging.getLogger("standard")
+
 
 api = WebexTeamsAPI(access_token=config.webex_teams_token)
 
-query_client = query_client.OpenVulnQueryClient(
+psirt_query = query_client.OpenVulnQueryClient(
     client_id=config.credentials.get("CLIENT_ID"),
     client_secret=config.credentials.get("CLIENT_SECRET"),
 )
@@ -53,8 +74,9 @@ def construct_message_alert(advisory):
 
 
 def date_from_string(s):
-    d = dateutil.parser.parse(s)
-    return d.replace(tzinfo=None)
+    # d = dateutil.parser.parse(s)
+    d = datetime.strptime(s, "%Y-%m-%dT%H:%M:%S%z")
+    return d.replace(tzinfo=timezone.utc).replace(tzinfo=None)
 
 
 def get_advisories_by_product(room_id, product="cisco", count=5):
@@ -63,7 +85,7 @@ def get_advisories_by_product(room_id, product="cisco", count=5):
         roomId=room_id,
         markdown=f"One moment please while I retrieve the last {count} alerts for product: {product}",
     )
-    advisories = query_client.get_by_product(adv_format="default", product_name=product)
+    advisories = psirt_query.get_by_product(adv_format="default", product_name=product)
 
     for advisory in advisories[0:4]:
         full_message = construct_message_alert(advisory)
@@ -77,7 +99,7 @@ def get_latest_advisories(room_id, product="cisco", count=5):
         roomId=room_id,
         markdown=f"One moment please while I retrieve the last {count} alerts",
     )
-    advisories = query_client.get_by_latest(adv_format="default", latest=count)
+    advisories = psirt_query.get_by_latest(adv_format="default", latest=count)
 
     for advisory in advisories:
         full_message = construct_message_alert(advisory)
@@ -93,8 +115,19 @@ def alert_subscribers(message):
     subscribers = db.search(User.subscribed == True)
 
     for user in subscribers:
-        print(f"sending {messages} to {user['room_title']}")
-        api.messages.create(user["room_id"], markdown=message)
+        print(f"sending message to {user['room_title']}")
+        # api.messages.create(user["room_id"], markdown=message)
+
+
+def notification_cache(advisory):
+    """
+    cache the last advisory details for future comparison of date stamps
+    """
+    last_update = {"last_updated": advisory.last_updated, "advisory_id": advisory.advisory_id}
+
+    with open("notification_cache.json", "w") as outfile:
+        json.dump(last_update, outfile, indent=2)
+    return True
 
 
 def periodic_check():
@@ -104,24 +137,29 @@ def periodic_check():
     logger.debug(f"checking psirt for updates")
 
     # check timedelta of most recent 5 alerts and send alert if newer than last 1hr
-    advisories = query_client.get_by_latest(adv_format="default", latest=5)
-
+    advisories = psirt_query.get_by_latest(adv_format="default", latest=20)
+    
     for advisory in advisories:
-        logging.debug(f"advisory last_updated: {advisory.last_updated}")
+        logger.debug(f"advisory last_updated: {advisory.last_updated}")
         advisory_date = date_from_string(advisory.last_updated)
-        advisory_time_delta = (datetime.now() - advisory_date).total_seconds()
 
+        print("advisory date: ", advisory_date)
+        print("now      date: ", datetime.now(pytz.timezone("US/Pacific")))
+
+        advisory_time_delta = (datetime.now() - advisory_date).total_seconds()
         if advisory_time_delta <= 3600:
-            logging.info(
+            logger.info(
                 f"timedelta is less than 1 hr: {advisory_time_delta} - sending alert"
             )
             full_message = construct_message_alert(advisory)
             alert_subscribers(full_message)
         else:
-            logging.debug(
+            logger.debug(
                 f"timedelta is greater than 1 hr since last_update: {advisory_time_delta}"
             )
 
+    # update the cache after peridoic check
+    notification_cache(advisories[0])
 
 if __name__ == "__main__":
     check_alerts = get_advisories()
