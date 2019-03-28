@@ -76,7 +76,6 @@ def construct_message_alert(advisory):
 def date_from_string(s):
     # convert string to datetime object
     d = datetime.strptime(s, "%Y-%m-%dT%H:%M:%S%z")
-    print(d)
     return d.replace(tzinfo=None)
 
 
@@ -85,6 +84,10 @@ def get_advisories_by_product(room_id, product="cisco", count=5):
     api.messages.create(
         roomId=room_id,
         markdown=f"One moment please while I retrieve the last {count} alerts for product: {product}",
+    )
+    psirt_query = query_client.OpenVulnQueryClient(
+        client_id=config.credentials.get("CLIENT_ID"),
+        client_secret=config.credentials.get("CLIENT_SECRET"),
     )
     advisories = psirt_query.get_by_product(adv_format="default", product_name=product)
 
@@ -99,6 +102,10 @@ def get_latest_advisories(room_id, product="cisco", count=5):
     api.messages.create(
         roomId=room_id,
         markdown=f"One moment please while I retrieve the last {count} alerts",
+    )
+    psirt_query = query_client.OpenVulnQueryClient(
+        client_id=config.credentials.get("CLIENT_ID"),
+        client_secret=config.credentials.get("CLIENT_SECRET"),
     )
     advisories = psirt_query.get_by_latest(adv_format="default", latest=count)
 
@@ -141,6 +148,10 @@ def periodic_check():
     logger.debug(f"checking psirt for updates")
 
     # check timedelta of most recent 5 alerts and send alert if newer than last 1hr
+    psirt_query = query_client.OpenVulnQueryClient(
+        client_id=config.credentials.get("CLIENT_ID"),
+        client_secret=config.credentials.get("CLIENT_SECRET"),
+    )
     advisories = psirt_query.get_by_latest(adv_format="default", latest=20)
 
     for advisory in advisories:
@@ -148,7 +159,7 @@ def periodic_check():
         advisory_date = date_from_string(advisory.last_updated)
 
         print("advisory date: ", advisory_date)
-        print("now      date: ", datetime.now(pytz.timezone("US/Pacific")))
+        print("now      date: ", datetime.now())
 
         advisory_time_delta = (datetime.now() - advisory_date).total_seconds()
         if advisory_time_delta <= 3600:
