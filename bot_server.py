@@ -9,7 +9,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 bot.register_webhook()
 
 scheduler = BackgroundScheduler()
-job = scheduler.add_job(psirt.periodic_check, "interval", minutes=1)
+job = scheduler.add_job(psirt.periodic_check, "interval", minutes=60)
 scheduler.start()
 
 serve(bot.app, host="0.0.0.0", port=webhook_port)
