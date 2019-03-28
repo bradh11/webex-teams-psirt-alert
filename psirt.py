@@ -76,6 +76,7 @@ def construct_message_alert(advisory):
 def date_from_string(s):
     # convert string to datetime object
     d = datetime.strptime(s, "%Y-%m-%dT%H:%M:%S%z")
+    d = d - timedelta(hours=3)
     return d.replace(tzinfo=None)
 
 
