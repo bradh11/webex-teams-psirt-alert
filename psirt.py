@@ -124,7 +124,7 @@ def alert_subscribers(message):
     subscribers = db.search(User.subscribed == True)
 
     for user in subscribers:
-        print(f"sending message to {user['room_title']}")
+        logger.info(f"sending message to {user['room_title']}")
         api.messages.create(user["room_id"], markdown=message)
 
 
