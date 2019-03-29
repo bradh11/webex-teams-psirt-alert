@@ -192,14 +192,14 @@ def webhook_receiver():
     if json_data["data"]["personEmail"] != config.bot_email:
         update_room_in_database(json_data)
 
-    # print(json_data)
-    if json_data["resource"] == "memberships" and json_data["event"] == "created":
+    print(json_data)
+    if json_data["resource"] == "memberships" and json_data["event"] == "created" and json_data["data"]["roomType"] == "direct":
         update_room_in_database(json_data)
         subscribe_to_updates(
             room_id=json_data["data"]["roomId"], reason="deleted_membership"
         )
 
-    if json_data["resource"] == "memberships" and json_data["event"] == "deleted":
+    if json_data["resource"] == "memberships" and json_data["event"] == "deleted" and json_data["data"]["roomType"] == "direct":
         # disable subscription for room
         unsubscribe_to_updates(
             room_id=json_data["data"]["roomId"], reason="deleted_membership"
