@@ -6,13 +6,9 @@ from webexteamssdk import WebexTeamsAPI
 from tinydb import TinyDB, Query, where
 import yaml
 import config
+import bot
 
 this_folder = os.getcwd()
-
-# initialize the database
-db = TinyDB("db.json", indent=2, sort_keys=True)
-db.table(name="_default", cache_size=0)
-User = Query()
 
 if os.path.exists(f"{this_folder}/logs/logfile.log"):
     pass
@@ -117,17 +113,6 @@ def get_latest_advisories(room_id, product="cisco", count=5):
     return True
 
 
-def alert_subscribers(message):
-    """
-    Alert subscribers that a version has changed
-    """
-    subscribers = db.search(User.subscribed == True)
-
-    for user in subscribers:
-        logger.info(f"sending message to {user['room_title']}")
-        api.messages.create(user["room_id"], markdown=message)
-
-
 def notification_cache(advisory):
     """
     cache the last advisory details for future comparison of date stamps
@@ -168,7 +153,7 @@ def periodic_check():
                 f"timedelta is less than 1 hr: {advisory_time_delta} - sending alert"
             )
             full_message = construct_message_alert(advisory)
-            alert_subscribers(full_message)
+            bot.alert_subscribers(full_message)
         else:
             logger.debug(
                 f"timedelta is greater than 1 hr since last_update: {advisory_time_delta}"
