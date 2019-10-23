@@ -186,8 +186,14 @@ def alert_subscribers(message):
     subscribers = db.search(User.subscribed == True)
 
     for user in subscribers:
-        logger.info(f"sending message to {user['room_title']}")
-        api.messages.create(user["room_id"], markdown=message)
+        try:
+            api.messages.create(user["room_id"], markdown=message)
+        except Exception as e:
+            unsubscribe_to_updates(room_id=user["room_id"], reason="404 not found")
+            logger.error(e)
+            logger.error(f"unable to send to room {user['room_id']}: {user['room_id']}")
+        else:
+            logger.info(f"message sent to {user['room_title']}")
 
 
 @app.route(f"/{config.bot_name}", methods=["POST"])
