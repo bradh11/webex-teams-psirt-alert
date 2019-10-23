@@ -16,4 +16,4 @@ This is a Webex Teams Bot that will allow users to subscribe and query Cisco's P
 2. expose your webhook listener (open a port to your bot server webhook listener, or leverage a cloud service provider)
 3. invite the bot to a 1-1 space or a group space in webex teams and ask for help. The rest should be self evident.
 
-This code was built as a personal project for myself to saty up to date with Cisco issues. That said, the bot service code itself may have some bugs, feel free to help me squash `em. Open an issue and a PR and I will gladly roll in any fixes.
+This code was built as a personal project for myself to stay up to date with Cisco issues. That said, the bot service code itself may have some bugs, feel free to help me squash `em. Open an issue and a PR and I will gladly roll in any fixes.
