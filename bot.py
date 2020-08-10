@@ -19,7 +19,7 @@ else:
     os.makedirs(os.path.dirname(f"{this_folder}/logs/logfile.log"), exist_ok=True)
     open(f"{this_folder}/logs/logfile.log", "a").close()
 
-logging_config = yaml.load(open("./logging_config.yaml", "r"))
+logging_config = yaml.safe_load(open("./logging_config.yaml", "r"))
 logging.config.dictConfig(logging_config)
 logger = logging.getLogger("standard")
 
