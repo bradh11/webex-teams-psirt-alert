@@ -16,7 +16,7 @@ else:
     os.makedirs(os.path.dirname(f"{this_folder}/logs/logfile.log"), exist_ok=True)
     open(f"{this_folder}/logs/logfile.log", "a").close()
 
-logging_config = yaml.load(open("./logging_config.yaml", "r"))
+logging_config = yaml.safe_load(open("./logging_config.yaml", "r"))
 logging.config.dictConfig(logging_config)
 logger = logging.getLogger("standard")
 
@@ -71,7 +71,7 @@ def construct_message_alert(advisory):
 
 def date_from_string(s):
     # convert string to datetime object
-    d = datetime.strptime(s, "%Y-%m-%dT%H:%M:%S%z")
+    d = datetime.strptime(s, "%Y-%m-%dT%H:%M:%S")
     d = d - timedelta(hours=4)
     return d.replace(tzinfo=None)
 
